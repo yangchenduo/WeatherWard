@@ -4,11 +4,16 @@
 
 ## 功能特点
 
-- 🌤️ 实时天气查询
-- 👔 AI 智能搭配推荐
-- 📁 本地衣橱管理 - 实时天气查询（OpenWeatherMap，支持中文城市名）I 图片分析衣服（款式/颜色/材质/季节/风格）
-- 🔄 多模型支持（MiMo、DeepSeek、MiniMax）
-- 🤖 Hermes Agent 集成
+- 🌤️ 实时天气查询（OpenWeatherMap，支持中文城市名）
+- 👔 AI 图片分析衣服（款式/颜色/材质/季节/风格）
+- 📁 结构化衣橱索引（增量导入，删除检测）
+- 🔍 智能候选过滤（根据温度/天气/偏好自动筛选）
+- ✨ AI 搭配推荐 + 合理性审查（防止逻辑冲突搭配）
+- 💬 交互式对话模式（LangChain Agent 驱动）
+- 🔄 多模型支持（MiMo、MiniMax）
+- 🤖 MCP Server 集成（供 Hermes 等 Agent 调用）
+
+> **注意**：`weatherward index`（图片分析）需要支持多模态（图片输入）的模型。DeepSeek 标准 API（`deepseek-chat`）为纯文本模型，不支持图片分析，仅可用于 `recommend`/`chat`（基于已建好的文本索引）。推荐使用 MiMo 作为默认模型。
 
 ## 安装
 
@@ -103,6 +108,51 @@ weatherward chat --help
 - `--wardrobe` 默认 `./my_clothes`
 - `--import-from` 默认 `./import_clothes`
 - `--city` 未指定时，chat 模式使用 `.env` 中的 `DEFAULT_CITY`
+
+## Hermes Agent 集成
+
+WeatherWard 提供 MCP Server，可供 Hermes 等 Agent 框架调用。
+
+### 方法一：标准 MCP 配置
+
+在 Hermes 的 MCP 配置文件中添加：
+
+```json
+{
+  "mcpServers": {
+    "weatherward": {
+      "command": "python",
+      "args": ["-m", "weatherward.mcp.server"],
+      "env": {
+        "MIMO_API_KEY": "your-api-key",
+        "OPENWEATHER_API_KEY": "your-weather-key"
+      }
+    }
+  }
+}
+```
+
+MCP Server 暴露两个工具：
+- `get_outfit_recommendation` - 根据天气和衣橱推荐穿搭
+- `get_weather` - 获取指定城市天气
+
+### 方法二：让 Hermes 自己写 Skill
+
+直接告诉 Hermes 项目路径，让它自行读取代码并生成调用方式：
+
+```
+请阅读 E:\work\WeatherWard 这个项目的代码，它是一个智能衣橱助手。
+MCP Server 入口在 src/weatherward/mcp/server.py，
+启动命令是 python -m weatherward.mcp.server。
+请为这个工具创建一个 Skill，让你可以帮我推荐穿搭。
+```
+
+Hermes 会自动：
+1. 读取项目结构和 MCP Server 代码
+2. 理解暴露的工具（`get_outfit_recommendation`、`get_weather`）
+3. 生成对应的 Skill 配置
+
+这种方式更灵活，Hermes 能根据最新代码自适应。
 
 ## 开发
 
