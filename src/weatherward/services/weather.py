@@ -37,6 +37,60 @@ class WeatherInfo:
         )
 
 
+CITY_ZH_TO_EN: dict[str, str] = {
+    "北京": "Beijing",
+    "上海": "Shanghai",
+    "广州": "Guangzhou",
+    "深圳": "Shenzhen",
+    "大连": "Dalian",
+    "天津": "Tianjin",
+    "重庆": "Chongqing",
+    "成都": "Chengdu",
+    "杭州": "Hangzhou",
+    "南京": "Nanjing",
+    "武汉": "Wuhan",
+    "西安": "Xi'an",
+    "苏州": "Suzhou",
+    "长沙": "Changsha",
+    "沈阳": "Shenyang",
+    "青岛": "Qingdao",
+    "郑州": "Zhengzhou",
+    "哈尔滨": "Harbin",
+    "济南": "Jinan",
+    "厦门": "Xiamen",
+    "福州": "Fuzhou",
+    "昆明": "Kunming",
+    "合肥": "Hefei",
+    "长春": "Changchun",
+    "石家庄": "Shijiazhuang",
+    "贵阳": "Guiyang",
+    "南宁": "Nanning",
+    "太原": "Taiyuan",
+    "南昌": "Nanchang",
+    "海口": "Haikou",
+    "兰州": "Lanzhou",
+    "乌鲁木齐": "Urumqi",
+    "拉萨": "Lhasa",
+    "呼和浩特": "Hohhot",
+    "银川": "Yinchuan",
+    "西宁": "Xining",
+    "香港": "Hong Kong",
+    "澳门": "Macau",
+    "台北": "Taipei",
+    "无锡": "Wuxi",
+    "宁波": "Ningbo",
+    "佛山": "Foshan",
+    "东莞": "Dongguan",
+    "珠海": "Zhuhai",
+    "温州": "Wenzhou",
+    "大同": "Datong",
+    "洛阳": "Luoyang",
+    "烟台": "Yantai",
+    "威海": "Weihai",
+    "三亚": "Sanya",
+}
+
+
 class WeatherService:
     """天气服务"""
 
@@ -85,12 +139,14 @@ class WeatherService:
             if time.time() - cached_time < self.cache_ttl:
                 return cached_info
 
+        query_city = CITY_ZH_TO_EN.get(city, city)
+
         # 调用 API
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 self.BASE_URL,
                 params={
-                    "q": city,
+                    "q": query_city,
                     "appid": self.api_key,
                     "units": self.units,
                     "lang": self.lang,

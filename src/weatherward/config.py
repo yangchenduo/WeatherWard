@@ -71,12 +71,18 @@ def load_settings(
     weather_config = file_config.get("weather", {})
     wardrobe_config = file_config.get("wardrobe", {})
 
+    # 自动检测 MiMo base_url
+    api_key = os.getenv("MIMO_API_KEY", model_config.get("api_key", ""))
+    default_base_url = "https://api.xiaomimimo.com/v1"
+    if api_key.startswith("tp-"):
+        default_base_url = "https://token-plan-cn.xiaomimimo.com/v1"
+
     return Settings(
         model=ModelConfig(
             provider=os.getenv("MODEL_PROVIDER", model_config.get("provider", "mimo")),
-            api_key=os.getenv("MIMO_API_KEY", model_config.get("api_key", "")),
+            api_key=api_key,
             model_id=os.getenv("MODEL_ID", model_config.get("model_id", "mimo-v2.5")),
-            base_url=model_config.get("base_url", "https://api.xiaomimimo.com/v1"),
+            base_url=os.getenv("MIMO_BASE_URL", model_config.get("base_url", default_base_url)),
             max_tokens=model_config.get("max_tokens", 2048),
         ),
         weather=WeatherConfig(
