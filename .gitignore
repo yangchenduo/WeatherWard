@@ -52,3 +52,5 @@ Thumbs.db
 cache/
 /.history
 /my_clothes
+/import_clothes
+.wardrobe_index.json

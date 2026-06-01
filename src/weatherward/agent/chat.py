@@ -2,23 +2,35 @@
 
 from pathlib import Path
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.language_models import BaseChatModel
 
 from weatherward.config import Settings
 from weatherward.services.llm import create_llm
 from weatherward.agent.tools import configure, get_tools
 
+MAX_TOOL_ITERATIONS = 10
 
-SYSTEM_PROMPT_TEMPLATE = """你是 WeatherWard 智能衣橱助手。你可以帮助用户：
 
-1. 查询任意城市的天气
-2. 扫描和分析用户衣橱中的衣服
-3. 根据天气和衣橱推荐今日穿搭
+SYSTEM_PROMPT_TEMPLATE = """你是 WeatherWard 智能衣橱助手。
+
+## 核心规则
+**你必须使用工具来回答问题，禁止使用通用知识猜测。**
+
+## 可用工具
+1. `get_weather` - 查询天气
+2. `scan_wardrobe` - 查看衣橱里有哪些衣服
+3. `recommend_outfit` - 根据天气+衣橱推荐穿搭
+
+## 行为规范
+- 用户问"今天穿什么"/"怎么搭配" → 必须调用 `recommend_outfit`
+- 用户问"天气怎么样" → 必须调用 `get_weather`
+- 用户问"我有什么衣服" → 必须调用 `scan_wardrobe`
+- 闲聊时可以正常对话，但涉及穿搭/天气/衣橱时必须用工具
 
 用户的默认城市是：{default_city}。当用户问"今天穿什么"但没有指定城市时，直接使用默认城市，不需要追问。
 
-请用中文回答，语气友好自然。如果用户只是闲聊，也可以正常对话。"""
+请用中文回答，语气友好自然。"""
 
 
 class WardrobeAgent:
@@ -44,17 +56,29 @@ class WardrobeAgent:
         response = await self.agent_llm.ainvoke(self.messages)
         self.messages.append(response)
 
+        iterations = 0
         while response.tool_calls:
+            iterations += 1
+            if iterations > MAX_TOOL_ITERATIONS:
+                self.messages.append(HumanMessage(
+                    content="工具调用次数过多，请直接给出最终回答。"
+                ))
+                response = await self.agent_llm.ainvoke(self.messages)
+                self.messages.append(response)
+                break
+
             for tool_call in response.tool_calls:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
 
-                if tool_name in self.tools_map:
-                    tool_result = await self.tools_map[tool_name].ainvoke(tool_args)
-                else:
-                    tool_result = f"未知工具: {tool_name}"
+                try:
+                    if tool_name in self.tools_map:
+                        tool_result = await self.tools_map[tool_name].ainvoke(tool_args)
+                    else:
+                        tool_result = f"未知工具: {tool_name}"
+                except Exception as e:
+                    tool_result = f"工具执行出错: {e}"
 
-                from langchain_core.messages import ToolMessage
                 tool_msg = ToolMessage(
                     content=str(tool_result),
                     tool_call_id=tool_call["id"],
