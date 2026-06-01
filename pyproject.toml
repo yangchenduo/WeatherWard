@@ -7,7 +7,7 @@ name = "weatherward"
 version = "0.1.0"
 description = "智能衣服搭配助手 - 根据天气和衣橱推荐穿搭"
 readme = "README.md"
-license = "MIT"
+license = "GPL-3.0-or-later"
 requires-python = ">=3.10"
 authors = [
     { name = "WeatherWard Team" },
